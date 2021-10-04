@@ -4,10 +4,36 @@
 */
 
 'use strict';
-
-const express = require("express");
-const fs = require('fs');
+const express = require('express');
 const app = express();
+
+var cors = require('cors'); //import cors module
+
+var whitelist = [ 'http://localhost:8080']; //white list consumers
+var corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+	  console.log("white list");
+    } else {
+      callback(null, false);
+	  console.log("black list");
+    }
+
+  },
+  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  credentials: false, //Credentials are cookies, authorization headers or TLS client certificates.
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
+};
+
+
+app.use(cors(corsOptions)); //adding cors middleware to the express with above configurations
+
+
+//app.use(cors());
+//app.options('*', cors());
+const fs = require('fs');
 let chessGames = "[]";
 // --- Reading chess games on the server and putting the array into a variable chessGames
 fs.readFile("./chessGames.json", "utf8", (err, rawdata) => {
@@ -54,7 +80,7 @@ app.delete('/game/:id', (req, res) => {
   });
 
 // --- posting a new game
-app.post('/game', function(req, res){
+app.put('/game', function(req, res){
 	let game = JSON.parse(req.body);      // your JSON
 	if(!chessGames || chessGames.length === 0){
 		chessGames.push(game);
@@ -72,6 +98,14 @@ app.post('/game', function(req, res){
 			});
 		}
 	}
+	fs.writeFile("./chessGames.json", JSON.stringify(chessGames), err => {
+		if (err) console.log("Error writing file:", err);
+	  });
+	res.status(200).json(chessGames);
+  });
+
+  app.put('/games', function(req, res){
+	let chessGames = JSON.parse(req.body);      // your JSON
 	fs.writeFile("./chessGames.json", JSON.stringify(chessGames), err => {
 		if (err) console.log("Error writing file:", err);
 	  });
