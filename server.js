@@ -31,10 +31,8 @@ var corsOptions = {
 app.use(cors(corsOptions)); //adding cors middleware to the express with above configurations
 
 
-//app.use(cors());
-//app.options('*', cors());
 const fs = require('fs');
-let chessGames = "[]";
+let chessGames = [];
 // --- Reading chess games on the server and putting the array into a variable chessGames
 fs.readFile("./chessGames.json", "utf8", (err, rawdata) => {
 	if (err) {
@@ -46,6 +44,8 @@ fs.readFile("./chessGames.json", "utf8", (err, rawdata) => {
   });
 
 app.use(express.static(__dirname + "/public"));
+
+app.use(express.json());
 
 // --- Getting all the games
 app.get('/games', (req,res) => {
@@ -61,32 +61,42 @@ app.get('/game/:id', (req,res) => {
 
 // --- Deleting one game
 app.delete('/game/:id', (req, res) => {
-	let id = req.params.id;
-	let checkGame = chessGames.filter((x) => {
-		return x.id === x.id;
-	});
-	
-	if(checkGame.length === 0){
-		res.status(400);
-	}else{
-		chessGames = chessGames.filter((game) => {
-			return game.id !== id;
-		  })
-	}
-	fs.writeFile("./chessGames.json", JSON.stringify(chessGames), err => {
-		if (err) console.log("Error writing file:", err);
+	let result = {"success":true,"message":""};
+	let id = Number(req.params.id);
+	console.log(id);
+	let beforeSize = chessGames.length;
+	chessGames = chessGames.filter((game) => {
+		debugger
+		return game.id !== id;
 	  });
-	res.status(200).json(chessGames);
+	let afterSize = chessGames.length;
+	console.log("before : "+ beforeSize);
+	console.log("after : "+ afterSize);
+
+	let gameStr = JSON.stringify(chessGames);
+
+	fs.writeFile("./chessGames.json", gameStr, err => {
+		if (err) {
+			console.log("Error writing file:", err);
+			result.success = false;
+			result.message = err.toString();
+		}
+	  });
+	res.status(200).json(result);
   });
 
 // --- posting a new game
 app.put('/game', function(req, res){
-	let game = JSON.parse(req.body);      // your JSON
+	let result = {"success":true,"message":""};
+	let game = req.body;      // your JSON
+	let id = game.id;
+
 	if(!chessGames || chessGames.length === 0){
+		chessGame = [];
 		chessGames.push(game);
 	}else{
 		let checkGame = chessGames.filter((x) => {
-			return x.id === x.id;
+			return x.id === id;
 		});
 		if(checkGame.length === 0){
 			chessGames.push(game);
@@ -98,19 +108,18 @@ app.put('/game', function(req, res){
 			});
 		}
 	}
-	fs.writeFile("./chessGames.json", JSON.stringify(chessGames), err => {
-		if (err) console.log("Error writing file:", err);
+	let gameStr = JSON.stringify(chessGames);
+
+	fs.writeFile("./chessGames.json", gameStr, err => {
+		if (err) {
+			console.log("Error writing file:", err);
+			result.success = false;
+			result.message = err.toString();
+		}
 	  });
-	res.status(200).json(chessGames);
+	res.status(200).json(result);
   });
 
-  app.put('/games', function(req, res){
-	let chessGames = JSON.parse(req.body);      // your JSON
-	fs.writeFile("./chessGames.json", JSON.stringify(chessGames), err => {
-		if (err) console.log("Error writing file:", err);
-	  });
-	res.status(200).json(chessGames);
-  });
 
 app.listen(8080, () => {
     console.log("Chess server starts");
