@@ -120,8 +120,8 @@ app.put('/game', function(req, res){
 	res.status(200).json(result);
   });
 
-
-app.listen(8080, () => {
-    console.log("Chess server starts");
+const port = process.env.PORT || 8080
+app.listen(port, () => {
+    console.log("Chess server starts at port " + port);
 })
 
