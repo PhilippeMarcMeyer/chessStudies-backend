@@ -1,4 +1,4 @@
-# node-api
+# node-api v0.11
 
  node server for my chess studies
  
@@ -6,7 +6,7 @@
 
 to do :
 
-1. Put the games in a data folder
+1. ~~Put the games in a data folder~~
 2. put the openings on the server in a json file
 3. Allow personal notes on openings : stored on the server in a openingNotes file
 4. Allow personnal notes on a games : stored on the server in the game
