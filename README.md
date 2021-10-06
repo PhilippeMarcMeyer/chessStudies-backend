@@ -12,3 +12,4 @@ to do :
 4. Allow personnal notes on a games : stored on the server in the game
 5. Allow personnal notes on a move : stored on the server in the game
 6. Auth : create a session with an id in a cookie
+7. put the PGN analysis on the server side
