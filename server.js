@@ -1,15 +1,19 @@
 
-/* Chess studies API v0.1 
+/* Chess studies API v0.11
 * Philippe Marc Meyer 2021
 */
 
 'use strict';
 const express = require('express');
+const cors = require('cors'); //import cors module
+
 const app = express();
 
-var cors = require('cors'); //import cors module
+app.use(express.json())
 
-var whitelist = [ 'http://localhost:8080']; //white list consumers
+const port = process.env.PORT || 8080
+
+var whitelist = [ 'http://localhost:'+port,'https://jumpty-rapid-hovefly.glitch.me:'+port]; //white list consumers
 var corsOptions = {
   origin: function (origin, callback) {
     if (!origin || whitelist.indexOf(origin) !== -1) {
@@ -27,14 +31,13 @@ var corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'device-remember-token', 'Access-Control-Allow-Origin', 'Origin', 'Accept']
 };
 
-
 app.use(cors(corsOptions)); //adding cors middleware to the express with above configurations
-
+app.use(express.static(__dirname + "/public"));
 
 const fs = require('fs');
 let chessGames = [];
 // --- Reading chess games on the server and putting the array into a variable chessGames
-fs.readFile("./chessGames.json", "utf8", (err, rawdata) => {
+fs.readFile("./data/chessGames.json", "utf8", (err, rawdata) => {
 	if (err) {
 	  console.log("File read failed:", err);
 	  return;
@@ -42,10 +45,6 @@ fs.readFile("./chessGames.json", "utf8", (err, rawdata) => {
 		chessGames = JSON.parse(rawdata);
 	}
   });
-
-app.use(express.static(__dirname + "/public"));
-
-app.use(express.json());
 
 // --- Getting all the games
 app.get('/games', (req,res) => {
@@ -63,19 +62,14 @@ app.get('/game/:id', (req,res) => {
 app.delete('/game/:id', (req, res) => {
 	let result = {"success":true,"message":""};
 	let id = Number(req.params.id);
-	console.log(id);
 	let beforeSize = chessGames.length;
 	chessGames = chessGames.filter((game) => {
-		debugger
 		return game.id !== id;
 	  });
 	let afterSize = chessGames.length;
-	console.log("before : "+ beforeSize);
-	console.log("after : "+ afterSize);
-
 	let gameStr = JSON.stringify(chessGames);
 
-	fs.writeFile("./chessGames.json", gameStr, err => {
+	fs.writeFile("./data/chessGames.json", gameStr, err => {
 		if (err) {
 			console.log("Error writing file:", err);
 			result.success = false;
@@ -110,7 +104,7 @@ app.put('/game', function(req, res){
 	}
 	let gameStr = JSON.stringify(chessGames);
 
-	fs.writeFile("./chessGames.json", gameStr, err => {
+	fs.writeFile("./data/chessGames.json", gameStr, err => {
 		if (err) {
 			console.log("Error writing file:", err);
 			result.success = false;
@@ -120,7 +114,6 @@ app.put('/game', function(req, res){
 	res.status(200).json(result);
   });
 
-const port = process.env.PORT || 8080
 app.listen(port, () => {
     console.log("Chess server starts at port " + port);
 })
