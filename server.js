@@ -13,7 +13,7 @@ app.use(express.json())
 
 const port = process.env.PORT || 8080
 
-var whitelist = [ 'http://localhost:'+port,'https://jumpty-rapid-hovefly.glitch.me:'+port]; //white list consumers
+var whitelist = [ 'http://localhost:'+port,]; //white list consumers
 var corsOptions = {
   origin: function (origin, callback) {
     if (!origin || whitelist.indexOf(origin) !== -1) {
@@ -62,11 +62,9 @@ app.get('/game/:id', (req,res) => {
 app.delete('/game/:id', (req, res) => {
 	let result = {"success":true,"message":""};
 	let id = Number(req.params.id);
-	let beforeSize = chessGames.length;
 	chessGames = chessGames.filter((game) => {
 		return game.id !== id;
 	  });
-	let afterSize = chessGames.length;
 	let gameStr = JSON.stringify(chessGames);
 
 	fs.writeFile("./data/chessGames.json", gameStr, err => {
@@ -83,8 +81,10 @@ app.delete('/game/:id', (req, res) => {
 app.put('/game', function(req, res){
 	let result = {"success":true,"message":""};
 	let game = req.body;      // your JSON
-	let id = game.id;
+	console.log(game.id);
+	console.log(game.comments);
 
+	let id = game.id;
 	if(!chessGames || chessGames.length === 0){
 		chessGame = [];
 		chessGames.push(game);
@@ -95,13 +95,13 @@ app.put('/game', function(req, res){
 		if(checkGame.length === 0){
 			chessGames.push(game);
 		}else{
-			chessGames.forEach((x)=>{
-				if(x.id === game.id){
-					x = game;
-				}
-			});
+			chessGames = chessGames.filter((game) => {
+				return game.id !== id;
+			  });
+			 chessGames.push(game);
 		}
 	}
+
 	let gameStr = JSON.stringify(chessGames);
 
 	fs.writeFile("./data/chessGames.json", gameStr, err => {
@@ -117,4 +117,3 @@ app.put('/game', function(req, res){
 app.listen(port, () => {
     console.log("Chess server starts at port " + port);
 })
-
