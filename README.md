@@ -1,17 +1,17 @@
-# node-api v0.11
+# chessStudies backend v0.20
 
  node server for my chess studies
  
- the front part is the built version of Chess studies feature/node-version branch
+ the front part is the built version of ChessStudies (front in reactjs)
 
 to do :
 
 1. ~~Put the games in a data folder~~
-2. put the openings on the server in a json file with a version number to sync w localStorage
-3. Allow personal notes on openings : stored on the server in a openingNotes file
-4. Allow personnal notes on a games : stored on the server in the game
-5. Allow personnal notes on a move : stored on the server in the game
-6. Auth : session and google
-7. put the PGN analysis on the server side
-8. Load games only if version number != server
-9. Manage a maximum localStorage usage
+1. ~~Auth : session~~
+1. ~~filename contening chess games specific to user~~
+1. Auth : redirect to login/password form instead of http 500
+1. put the PGN analysis on the server side
+1. Load games only if version number != server
+1. Manage a maximum localStorage usage
+
+

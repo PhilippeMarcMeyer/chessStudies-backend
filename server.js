@@ -1,5 +1,5 @@
 
-/* Chess studies API v0.11
+/* Chess studies backend v0.20
 * Philippe Marc Meyer 2021
 */
 
@@ -19,9 +19,11 @@ app.use(cookieParser())
 const port = process.env.PORT || 8080
 const devPort = 3000
 
-const cookieName = "chessStudies"
+const cookieName = "chessStudies";
+const baseFilename = "chessGames";
+const unauthFilename = "exampleGames.json";
 
-let users = [{login:"philmageo",pw:"$2b$10$J1hZVj6AGwmHoaY3F31/9OR75lldnlE5diARa/79Xl25EKVumMeuS",sessionId:"azertyuiop"}];
+let users = [{login:"pmg.meyer@gmail.com",name:"philmageo",pw:"$2b$10$J1hZVj6AGwmHoaY3F31/9OR75lldnlE5diARa/79Xl25EKVumMeuS",sessionId:"azertyuiop"}];
 
 let chessGames = [];
 
@@ -46,22 +48,34 @@ var corsOptions = {
 app.use(cors(corsOptions)); //adding cors middleware to the express with above configurations
 app.use(express.static(__dirname + "/public"));
 
-
-const fs = require('fs');
-// --- Reading chess games on the server and putting the array into a variable chessGames
-fs.readFile("./data/chessGames.json", "utf8", (err, rawdata) => {
-	if (err) {
-	  console.log("File read failed:", err);
-	  return;
-	}else{
-		chessGames = JSON.parse(rawdata);
-	}
-  });
+const {promises: {readFile}} = require("fs");
+const loadGames = (file) => {
+	return new Promise(function (resolve, reject) {
+		readFile("./data/" + file).then(fileBuffer => {
+			let rawdata = fileBuffer.toString();
+			chessGames = JSON.parse(rawdata);
+			resolve(chessGames);
+		}).catch(error => {
+			console.error(error.message);
+			process.exit(1);
+			reject(error.message);
+		});
+	});
+}
 
 // --- Getting all the games
 app.get('/games', (req,res) => {
-	if(checkSession(req)){
-		res.status(200).json(chessGames);
+	let session = checkSession(req);
+	if(session){
+		let filename = baseFilename + "-" + session.name + ".json"; 
+		loadGames(filename)
+		.then(function (data) {
+			session.games = [... data];
+			res.status(200).json(session.games);
+          })
+		  .catch(function(error){
+			res.status(500);
+		  });
 	}else{
 		res.status(401);
 	}
@@ -71,6 +85,7 @@ app.get('/games', (req,res) => {
 app.get('/game/:id', (req,res) => {
 	if(checkSession(req)){
 		const id = parseInt(req.params.id)
+		let chessGames = JSON.parse(session.games);
 		const chessGame = chessGames.find(game => game.id === id)
 		res.status(200).json(chessGame)
 	}else{
@@ -83,12 +98,14 @@ app.delete('/game/:id', (req, res) => {
 	if(checkSession(req)){
 		let result = {"success":true,"message":""};
 		let id = Number(req.params.id);
+		let chessGames = JSON.parse(session.games);
 		chessGames = chessGames.filter((game) => {
 			return game.id !== id;
 		  });
-		let gameStr = JSON.stringify(chessGames);
-	
-		fs.writeFile("./data/chessGames.json", gameStr, err => {
+		  session.games = JSON.stringify(chessGames);
+		  let filename = baseFilename + "-" + session.name + ".json"; 
+
+		fs.writeFile("./data/" + filename, session.games, err => {
 			if (err) {
 				console.log("Error writing file:", err);
 				result.success = false;
@@ -99,7 +116,6 @@ app.delete('/game/:id', (req, res) => {
 	}else{
 		res.status(401);
 	}
-
   });
 
 // --- posting a new game
@@ -108,6 +124,7 @@ app.put('/game', function(req, res){
 		let result = {"success":true,"message":""};
 		let game = req.body;      // your JSON
 		let id = game.id;
+		let chessGames = JSON.parse(session.games);
 		if(!chessGames || chessGames.length === 0){
 			chessGame = [];
 			chessGames.push(game);
@@ -124,10 +141,11 @@ app.put('/game', function(req, res){
 				 chessGames.push(game);
 			}
 		}
+
+		let filename = baseFilename + "-" + session.name + ".json"; 
+		session.games = JSON.stringify(chessGames);
 	
-		let gameStr = JSON.stringify(chessGames);
-	
-		fs.writeFile("./data/chessGames.json", gameStr, err => {
+		fs.writeFile("./data/"+filename, session.games, err => {
 			if (err) {
 				console.log("Error writing file:", err);
 				result.success = false;
@@ -145,19 +163,14 @@ app.listen(port, () => {
     console.log("Chess server starts at port " + port);
 })
 
-function getcookie(req) {
-    var cookie = req.headers.cookie;
-    // user=someone; session=QyhYzXhkTZawIb5qSl3KKyPVN (this is my cookie i get)
-    return cookie.split('; ');
-}
-
 function checkSession(req){
 	if(cookieName in req.cookies){
 		let userArr = users.filter((x)=>{
 			return x.sessionId === req.cookies.chessStudies;
 		})
-		return userArr.length === 1;
+		return userArr.length === 1 ? userArr[0] : false;
 	}else{
 		return false;
 	}
 }
+
