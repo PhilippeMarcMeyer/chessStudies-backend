@@ -23,7 +23,7 @@ const cookieName = "chessStudies";
 const baseFilename = "chessGames";
 const unauthFilename = "exampleGames.json";
 
-let users = [{login:"pmg.meyer@gmail.com",name:"philmageo",pw:"$2b$10$J1hZVj6AGwmHoaY3F31/9OR75lldnlE5diARa/79Xl25EKVumMeuS",sessionId:"azertyuiop"}];
+let users = [{id:1,login:"pmg.meyer@gmail.com",name:"philmageo",hash:"$2b$10$J1hZVj6AGwmHoaY3F31/9OR75lldnlE5diARa/79Xl25EKVumMeuS",sessionId:"azertyuiop"}];
 
 let chessGames = [];
 
@@ -67,6 +67,84 @@ const loadGames = (file) => {
 const readingError = "readingError";
 const sessionError = "sessionError";
 
+// -- logout
+
+app.get('/logout',(req,res) => {
+	let user = checkSession(req);
+	if(user){
+		users.forEach((x)=>{
+			if(x.id === user.id){
+				x.sessionId = null;
+			}
+		});
+		res.clearCookie(cookieName);
+	}else{
+		if(cookieName in req.cookies){
+			res.clearCookie(cookieName);
+		}
+	}
+
+    res.redirect('/');
+});
+
+// -- login 
+
+app.post('/login', (req,res) => {
+	let result = {"success":false,"message":sessionError};
+	let auth = req.body;      // your JSON
+	let username = auth.username.trim();
+	let password = auth.password.trim();
+
+	if(cookieName in req.cookies){
+		res.clearCookie(cookieName);
+	}
+
+	checkPassword(username,password)
+	.then(function(userId){
+		let userArr = users.filter((x)=>{
+			return x.id === userId;
+		});
+		let sessionId = (new Date()).getTime().toString(36) + Math.random().toString(36).slice(2);
+		users.forEach((x)=>{
+			if(x.id === userId){
+				x.sessionId = sessionId;
+			}
+		});
+		res.cookie(cookieName, sessionId, {httpOnly: true});
+		result = {"success":true,"message":"Welcome back "+ userArr[0].name +"!"};
+		res.send(result)
+	})
+	.catch(function(userId){
+		if(userId != 0){
+			users.forEach((x)=>{
+				if(x.id === userId){
+					x.sessionId = null;
+				}
+			});
+		}
+		res.send(result)
+	})
+})
+
+const checkPassword = (username,password) => {
+	return new Promise(function (resolve, reject) {
+		let userArr = users.filter((x)=>{
+			return x.name === username;
+		});
+		if(userArr.length === 1){
+			bcrypt.compare(myPlaintextPassword, userArr[0].hash)
+			.then(function(compareResult) {
+				if(compareResult){
+					resolve(userArr[0].id);
+				}else{
+					reject(userArr[0].id)
+				}
+			});
+		}else{
+			reject(0);
+		}
+	});
+}
 // --- Getting all the games
 app.get('/games', (req,res) => {
 	let session = checkSession(req);
@@ -93,7 +171,7 @@ app.get('/game/:id', (req,res) => {
 		const chessGame = chessGames.find(game => game.id === id)
 		res.status(200).json(chessGame)
 	}else{
-		res.status(401);
+		res.status(200).json({"error" : sessionError});
 	}
 })
 
@@ -118,7 +196,7 @@ app.delete('/game/:id', (req, res) => {
 		  });
 		res.status(200).json(result);
 	}else{
-		res.status(401);
+		res.status(200).json({"error" : sessionError});
 	}
   });
 
@@ -158,9 +236,8 @@ app.put('/game', function(req, res){
 		  });
 		res.status(200).json(result);
 	}else{
-		res.status(401);
+		res.status(200).json({"error" : sessionError});
 	}
-
   });
 
 app.listen(port, () => {
