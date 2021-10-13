@@ -1,5 +1,5 @@
 
-/* Chess studies backend v0.20
+/* Chess studies backend v0.21
 * Philippe Marc Meyer 2021
 */
 
@@ -57,11 +57,15 @@ const loadGames = (file) => {
 			resolve(chessGames);
 		}).catch(error => {
 			console.error(error.message);
-			process.exit(1);
 			reject(error.message);
+			process.exit(1);
 		});
 	});
 }
+// const
+
+const readingError = "readingError";
+const sessionError = "sessionError";
 
 // --- Getting all the games
 app.get('/games', (req,res) => {
@@ -74,10 +78,10 @@ app.get('/games', (req,res) => {
 			res.status(200).json(session.games);
           })
 		  .catch(function(error){
-			res.status(500);
+			res.status(200).json({"error" : readingError});
 		  });
 	}else{
-		res.status(401);
+		res.status(200).json({"error" : sessionError});
 	}
 })
 
