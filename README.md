@@ -1,4 +1,4 @@
-# chessStudies backend v0.21
+# chessStudies backend v0.22
 
 node server for my chess studies
  
@@ -16,6 +16,8 @@ to do :
 
 
 History :
+
+v0.22 : 2021-10-14 : login form back endpoint and the session id in a cookie
 
 v0.21 : 2021-10-13 : lock the game and give a feed back to user if no session : to do : a login form back endpoint and the session id in a cookie
 
