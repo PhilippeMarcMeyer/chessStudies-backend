@@ -1,4 +1,4 @@
-# chessStudies backend v0.22
+# chessStudies backend v0.23
 
 node server for my chess studies
  
@@ -17,7 +17,9 @@ to do :
 
 History :
 
-v0.22 : 2021-10-14 : login form back endpoint and the session id in a cookie
+v0.23 : 2021-10-14 : fixed rook choice in the analyse of the PGN, when both might move to the chosen place (checking if there are obstacles on the way)
+
+v0.22 : 2021-10-14 : login form back endpoint and the session id in a cookie + logout
 
 v0.21 : 2021-10-13 : lock the game and give a feed back to user if no session : to do : a login form back endpoint and the session id in a cookie
 
