@@ -8,7 +8,7 @@ const express = require('express');
 const cors = require('cors'); //import cors module
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser')
-
+const fs = require('fs');
 const saltRounds = 10;
 
 const app = express();
@@ -132,7 +132,8 @@ const checkPassword = (username,password) => {
 			return x.name === username;
 		});
 		if(userArr.length === 1){
-			bcrypt.compare(myPlaintextPassword, userArr[0].hash)
+
+			bcrypt.compare(password, userArr[0].hash)
 			.then(function(compareResult) {
 				if(compareResult){
 					resolve(userArr[0].id);
@@ -152,7 +153,11 @@ app.get('/games', (req,res) => {
 		let filename = baseFilename + "-" + session.name + ".json"; 
 		loadGames(filename)
 		.then(function (data) {
-			session.games = [... data];
+			users.forEach((x)=>{
+				if(x.id === session.id){
+					x.games =  [... data];
+				}
+			});
 			res.status(200).json(session.games);
           })
 		  .catch(function(error){
@@ -165,7 +170,8 @@ app.get('/games', (req,res) => {
 
 // --- Getting one game
 app.get('/game/:id', (req,res) => {
-	if(checkSession(req)){
+	let session = checkSession(req);
+	if(session){
 		const id = parseInt(req.params.id)
 		let chessGames = JSON.parse(session.games);
 		const chessGame = chessGames.find(game => game.id === id)
@@ -177,17 +183,18 @@ app.get('/game/:id', (req,res) => {
 
 // --- Deleting one game
 app.delete('/game/:id', (req, res) => {
-	if(checkSession(req)){
+	let session = checkSession(req);
+	if(session){
 		let result = {"success":true,"message":""};
 		let id = Number(req.params.id);
-		let chessGames = JSON.parse(session.games);
+		let chessGames=getUserSessionGames(session.id)
 		chessGames = chessGames.filter((game) => {
 			return game.id !== id;
 		  });
-		  session.games = JSON.stringify(chessGames);
+		  setUserSessionGames(session.id,chessGames)
 		  let filename = baseFilename + "-" + session.name + ".json"; 
 
-		fs.writeFile("./data/" + filename, session.games, err => {
+		fs.writeFile("./data/" + filename, JSON.stringify(chessGames), err => {
 			if (err) {
 				console.log("Error writing file:", err);
 				result.success = false;
@@ -202,11 +209,12 @@ app.delete('/game/:id', (req, res) => {
 
 // --- posting a new game
 app.put('/game', function(req, res){
-	if(checkSession(req)){
+	let session = checkSession(req);
+	if(session){
 		let result = {"success":true,"message":""};
 		let game = req.body;      // your JSON
 		let id = game.id;
-		let chessGames = JSON.parse(session.games);
+		let chessGames = getUserSessionGames(session.id);
 		if(!chessGames || chessGames.length === 0){
 			chessGame = [];
 			chessGames.push(game);
@@ -223,11 +231,11 @@ app.put('/game', function(req, res){
 				 chessGames.push(game);
 			}
 		}
+		setUserSessionGames(session.id,chessGames)
 
 		let filename = baseFilename + "-" + session.name + ".json"; 
-		session.games = JSON.stringify(chessGames);
-	
-		fs.writeFile("./data/"+filename, session.games, err => {
+
+		fs.writeFile("./data/"+filename, JSON.stringify(chessGames), err => {
 			if (err) {
 				console.log("Error writing file:", err);
 				result.success = false;
@@ -243,6 +251,25 @@ app.put('/game', function(req, res){
 app.listen(port, () => {
     console.log("Chess server starts at port " + port);
 })
+
+function getUserSessionGames(id){
+	let chessGames = [];
+	users.forEach((x)=>{
+		if(x.id === id){
+			chessGames =  [... x.games];
+		}
+	});
+	return chessGames;
+}
+
+function setUserSessionGames(id,games){
+	let chessGames = [];
+	users.forEach((x)=>{
+		if(x.id === id){
+			x.games =  [... games];
+		}
+	});
+}
 
 function checkSession(req){
 	if(cookieName in req.cookies){
