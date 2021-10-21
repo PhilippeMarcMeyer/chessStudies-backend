@@ -1,5 +1,6 @@
 
 /* Chess studies backend v0.21
+* v0.24 : 2021-10-21 : get rid of promise for games json reading, using my own promise
 * Philippe Marc Meyer 2021
 */
 
@@ -9,7 +10,6 @@ const cors = require('cors'); //import cors module
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser')
 const fs = require('fs');
-const saltRounds = 10;
 
 const app = express();
 
@@ -48,18 +48,30 @@ var corsOptions = {
 app.use(cors(corsOptions)); //adding cors middleware to the express with above configurations
 app.use(express.static(__dirname + "/public"));
 
-const {promises: {readFile}} = require("fs");
 const loadGames = (file) => {
 	return new Promise(function (resolve, reject) {
-		readFile("./data/" + file).then(fileBuffer => {
-			let rawdata = fileBuffer.toString();
-			chessGames = JSON.parse(rawdata);
+		if (!fs.existsSync("./data/" + file)) {
+			chessGames = [];
+			fs.writeFile("./data/" + file, JSON.stringify(chessGames), err => {
+				if (err) {
+					console.log("Error writing file on creatings games for new user:", err);
+					result.success = false;
+					result.message = err.toString();
+					return;
+				}
+			});
 			resolve(chessGames);
-		}).catch(error => {
-			console.error(error.message);
-			reject(error.message);
-			process.exit(1);
-		});
+		} else {
+			fs.readFile("./data/" + file, 'utf8', (err, rawdata) => {
+				if (err) {
+					console.error(err)
+					reject(error);
+					return
+				}
+				chessGames = JSON.parse(rawdata);
+				resolve(chessGames);
+			})
+		}
 	});
 }
 // const
@@ -187,21 +199,27 @@ app.delete('/game/:id', (req, res) => {
 	if(session){
 		let result = {"success":true,"message":""};
 		let id = Number(req.params.id);
-		let chessGames=getUserSessionGames(session.id)
-		chessGames = chessGames.filter((game) => {
-			return game.id !== id;
+		let filename = baseFilename + "-" + session.name + ".json"; 
+		loadGames(filename)
+		.then(function (chessGames) {
+			chessGames = chessGames.filter((game) => {
+				return game.id !== id;
+			  });
+			  setUserSessionGames(session.id,chessGames)
+	
+			fs.writeFile("./data/" + filename, JSON.stringify(chessGames), err => {
+				if (err) {
+					console.log("Error writing file on delete one:", err);
+					result.success = false;
+					result.message = err.toString();
+				}
+			  });
+			res.status(200).json(result);
+          })
+		  .catch(function(error){
+			res.status(200).json({"error" : readingError});
 		  });
-		  setUserSessionGames(session.id,chessGames)
-		  let filename = baseFilename + "-" + session.name + ".json"; 
 
-		fs.writeFile("./data/" + filename, JSON.stringify(chessGames), err => {
-			if (err) {
-				console.log("Error writing file:", err);
-				result.success = false;
-				result.message = err.toString();
-			}
-		  });
-		res.status(200).json(result);
 	}else{
 		res.status(200).json({"error" : sessionError});
 	}
@@ -214,35 +232,39 @@ app.put('/game', function(req, res){
 		let result = {"success":true,"message":""};
 		let game = req.body;      // your JSON
 		let id = game.id;
-		let chessGames = getUserSessionGames(session.id);
-		if(!chessGames || chessGames.length === 0){
-			chessGame = [];
-			chessGames.push(game);
-		}else{
-			let checkGame = chessGames.filter((x) => {
-				return x.id === id;
-			});
-			if(checkGame.length === 0){
+		let filename = baseFilename + "-" + session.name + ".json"; 
+		loadGames(filename)
+		.then(function (chessGames) {
+			if(!chessGames || chessGames.length === 0){
+				chessGame = [];
 				chessGames.push(game);
 			}else{
-				chessGames = chessGames.filter((game) => {
-					return game.id !== id;
-				  });
-				 chessGames.push(game);
+				let checkGame = chessGames.filter((x) => {
+					return x.id === id;
+				});
+				if(checkGame.length === 0){
+					chessGames.push(game);
+				}else{
+					chessGames = chessGames.filter((game) => {
+						return game.id !== id;
+					  });
+					 chessGames.push(game);
+				}
 			}
-		}
-		setUserSessionGames(session.id,chessGames)
-
-		let filename = baseFilename + "-" + session.name + ".json"; 
-
-		fs.writeFile("./data/"+filename, JSON.stringify(chessGames), err => {
-			if (err) {
-				console.log("Error writing file:", err);
-				result.success = false;
-				result.message = err.toString();
-			}
+			  setUserSessionGames(session.id,chessGames)
+	
+			fs.writeFile("./data/" + filename, JSON.stringify(chessGames), err => {
+				if (err) {
+					console.log("Error writing file on adding one:", err);
+					result.success = false;
+					result.message = err.toString();
+				}
+			  });
+			res.status(200).json(result);
+          })
+		  .catch(function(error){
+			res.status(200).json({"error" : readingError});
 		  });
-		res.status(200).json(result);
 	}else{
 		res.status(200).json({"error" : sessionError});
 	}
