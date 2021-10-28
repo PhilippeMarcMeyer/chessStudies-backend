@@ -1,6 +1,6 @@
 
-/* Chess studies backend v0.21
-* v0.24 : 2021-10-21 : get rid of promise for games json reading, using my own promise
+/* Chess studies backend v0.25
+* v0.25 : 2021-10-28 : debug mode to allow using it as an api for may other repo front (reactjs)
 * Philippe Marc Meyer 2021
 */
 
@@ -10,6 +10,8 @@ const cors = require('cors'); //import cors module
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser')
 const fs = require('fs');
+
+const mode = "prod"; // "prod || debug"
 
 const app = express();
 
@@ -140,19 +142,24 @@ app.post('/login', (req,res) => {
 
 const checkPassword = (username,password) => {
 	return new Promise(function (resolve, reject) {
+		const isDebug = mode === "debug" ;
+		let usernameToTest = isDebug ? "philmageo" : username;
 		let userArr = users.filter((x)=>{
-			return x.name === username;
+			return x.name === usernameToTest;
 		});
 		if(userArr.length === 1){
-
-			bcrypt.compare(password, userArr[0].hash)
-			.then(function(compareResult) {
-				if(compareResult){
-					resolve(userArr[0].id);
-				}else{
-					reject(userArr[0].id)
-				}
-			});
+			if(isDebug){
+				resolve(userArr[0].id);
+			}else{
+				bcrypt.compare(password, userArr[0].hash)
+				.then(function(compareResult) {
+					if(compareResult){
+						resolve(userArr[0].id);
+					}else{
+						reject(userArr[0].id)
+					}
+				});
+			}
 		}else{
 			reject(0);
 		}
@@ -293,14 +300,21 @@ function setUserSessionGames(id,games){
 	});
 }
 
-function checkSession(req){
-	if(cookieName in req.cookies){
+function checkSession(req) {
+	if (mode === "debug") {
 		let userArr = users.filter((x)=>{
-			return x.sessionId === req.cookies.chessStudies;
-		})
+			return x.name === "philmageo";
+		});
 		return userArr.length === 1 ? userArr[0] : false;
-	}else{
-		return false;
+	} else {
+		if (cookieName in req.cookies) {
+			let userArr = users.filter((x) => {
+				return x.sessionId === req.cookies.chessStudies;
+			})
+			return userArr.length === 1 ? userArr[0] : false;
+		} else {
+			return false;
+		}
 	}
 }
 
