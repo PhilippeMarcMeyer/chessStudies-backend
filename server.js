@@ -1,6 +1,6 @@
 
-/* Chess studies backend v0.25
-* v0.25 : 2021-10-28 : debug mode to allow using it as an api for may other repo front (reactjs)
+/* Chess studies backend v0.26
+* v0.26 : 2021-11-11 
 * Philippe Marc Meyer 2021
 */
 
